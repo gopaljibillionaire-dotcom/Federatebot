@@ -24,7 +24,7 @@ from aiogram.types import (
 from motor.motor_asyncio import AsyncIOMotorClient
 
 # --- CONFIGURATION ---
-BOT_TOKEN = "8739157428:AAGOkc7biRMGeyqSP5YxbiZf5_GBY5MZGvg"
+BOT_TOKEN = "8739157428:AAE63N1UIMGJO3B-uD12g3Gx52b6-ejUty4"
 MONGO_URI = "mongodb+srv://mahakalnaturalresourcespvtltd_db_user:OdzMVa8BxBGXf2eT@cluster0.hvxg8tb.mongodb.net/?appName=Cluster0"
 OXAPAY_API_KEY = "YOUR_OXAPAY_API_KEY"
 
