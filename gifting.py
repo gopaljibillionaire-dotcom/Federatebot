@@ -30,6 +30,14 @@ BOT_TOKEN = "8739157428:AAE63N1UIMGJO3B-uD12g3Gx52b6-ejUty4"
 MONGO_URI = "mongodb+srv://mahakalnaturalresourcespvtltd_db_user:OdzMVa8BxBGXf2eT@cluster0.hvxg8tb.mongodb.net/?appName=Cluster0"
 OXAPAY_API_KEY = "YOUR_OXAPAY_API_KEY"
 
+# --- CUSTOM EMOJI IDS ---
+EMOJI_WALLET = "5256186332669035163"
+EMOJI_PROFILE = "5258011929993026890"
+EMOJI_BUY_PREMIUM = "6008060777771045457"
+EMOJI_BUY_STARS = "5366119022792294762"
+EMOJI_SETTINGS = "5258096772776991776"
+EMOJI_SUPPORT = "5395804191769763641"
+
 # --- IMGBB IMAGES ---
 IMG_MAIN = "https://picsum.photos/800/400?text=Welcome+to+Fedarate"
 IMG_PREMIUM = "https://i.ibb.co/6JHkSgfj/IMG-20260920-131952-198.jpg"
@@ -125,40 +133,61 @@ def get_main_menu_keyboard():
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Buy Premium", callback_data="ui_buy_premium"
+                    text="Buy Premium",
+                    callback_data="ui_buy_premium",
+                    api_custom_emoji_id=EMOJI_BUY_PREMIUM,
                 ),
                 InlineKeyboardButton(
-                    text="Buy boosts", callback_data="btn_buy_boosts"
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text="Buy Stars", callback_data="btn_buy_stars"
-                ),
-                InlineKeyboardButton(
-                    text="Sell Stars", callback_data="btn_sell_stars"
+                    text="Buy boosts",
+                    callback_data="btn_buy_boosts",
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="Profile/Stats", callback_data="btn_profile"
+                    text="Buy Stars",
+                    callback_data="btn_buy_stars",
+                    api_custom_emoji_id=EMOJI_BUY_STARS,
                 ),
                 InlineKeyboardButton(
-                    text="Wallet", callback_data="btn_wallet", style="success"
+                    text="Sell Stars",
+                    callback_data="btn_sell_stars",
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="Host a Giveaway", callback_data="btn_giveaway"
+                    text="Profile/Stats",
+                    callback_data="btn_profile",
+                    api_custom_emoji_id=EMOJI_PROFILE,
+                ),
+                InlineKeyboardButton(
+                    text="Wallet",
+                    callback_data="btn_wallet",
+                    style="success",
+                    api_custom_emoji_id=EMOJI_WALLET,
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Host a Giveaway",
+                    callback_data="btn_giveaway",
                 )
             ],
-            [InlineKeyboardButton(text="More", callback_data="btn_more")],
             [
                 InlineKeyboardButton(
-                    text="Settings", callback_data="btn_settings"
+                    text="More",
+                    callback_data="btn_more",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Settings",
+                    callback_data="btn_settings",
+                    api_custom_emoji_id=EMOJI_SETTINGS,
                 ),
                 InlineKeyboardButton(
-                    text="Support", callback_data="btn_support"
+                    text="Support",
+                    callback_data="btn_support",
+                    api_custom_emoji_id=EMOJI_SUPPORT,
                 ),
             ],
         ]
@@ -185,11 +214,9 @@ def get_more_menu_keyboard():
 
 
 def get_cases_grid_keyboard(opened_index=None, revealed=False):
-    rewards = ["6 Stars", "15 Stars", "25 Stars", "1 Month TG Premium", "Better Luck Next Time"]
-    
     keyboard = []
     row = []
-    
+
     for i in range(1, 7):
         if not revealed:
             btn_text = "🎁"
@@ -200,19 +227,19 @@ def get_cases_grid_keyboard(opened_index=None, revealed=False):
             else:
                 btn_text = random.choice(["6 Stars", "15 Stars", "25 Stars", "1 Month TG Premium"])
             style = "danger"
-            
+
         row.append(
             InlineKeyboardButton(
                 text=btn_text,
                 callback_data=f"open_case_{i}" if not revealed else "case_opened_already",
-                style=style
+                style=style,
             )
         )
-        
+
         if len(row) == 3:
             keyboard.append(row)
             row = []
-            
+
     keyboard.append(
         [
             InlineKeyboardButton(
@@ -245,7 +272,9 @@ def get_premium_keyboard():
             ],
             [
                 InlineKeyboardButton(
-                    text="Contact Support", callback_data="btn_contact_support"
+                    text="Contact Support",
+                    callback_data="btn_contact_support",
+                    api_custom_emoji_id=EMOJI_SUPPORT,
                 )
             ],
             [
@@ -282,7 +311,9 @@ def get_duration_keyboard():
                     text="Change Recipient", callback_data="btn_buy_other"
                 ),
                 InlineKeyboardButton(
-                    text="Contact Support", callback_data="btn_contact_support"
+                    text="Contact Support",
+                    callback_data="btn_contact_support",
+                    api_custom_emoji_id=EMOJI_SUPPORT,
                 ),
             ],
             [
@@ -306,6 +337,7 @@ def get_payment_keyboard(pay_url: str, plan_type: str, amount: float):
                 InlineKeyboardButton(
                     text="Deduct from wallet balance",
                     callback_data=f"deduct_{plan_type}_{amount}",
+                    api_custom_emoji_id=EMOJI_WALLET,
                 )
             ],
             [
@@ -313,7 +345,9 @@ def get_payment_keyboard(pay_url: str, plan_type: str, amount: float):
                     text="Change Recipient", callback_data="btn_buy_other"
                 ),
                 InlineKeyboardButton(
-                    text="Contact Support", callback_data="btn_contact_support"
+                    text="Contact Support",
+                    callback_data="btn_contact_support",
+                    api_custom_emoji_id=EMOJI_SUPPORT,
                 ),
             ],
             [
@@ -336,6 +370,7 @@ def get_thankyou_keyboard():
                     text="Contact Support",
                     callback_data="btn_contact_support",
                     style="success",
+                    api_custom_emoji_id=EMOJI_SUPPORT,
                 ),
             ],
             [
@@ -352,7 +387,9 @@ def get_support_us_keyboard():
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Telegram Stars", callback_data="btn_donate_stars"
+                    text="Telegram Stars",
+                    callback_data="btn_donate_stars",
+                    api_custom_emoji_id=EMOJI_BUY_STARS,
                 ),
                 InlineKeyboardButton(
                     text="Crypto Currency", callback_data="btn_donate_crypto"
@@ -401,7 +438,7 @@ async def show_more_menu(callback: CallbackQuery):
 @dp.callback_query(F.data == "btn_weekly_cases")
 async def show_weekly_cases(callback: CallbackQuery):
     user_data = await get_or_create_user(callback.from_user)
-    
+
     today = datetime.datetime.now().weekday()  # Sunday is 6
     is_sunday = (today == 6)
     weekly_spends = user_data.get("weekly_spends", 0.0)
@@ -436,9 +473,9 @@ async def show_weekly_cases(callback: CallbackQuery):
 @dp.callback_query(F.data.startswith("open_case_"))
 async def open_case(callback: CallbackQuery):
     case_idx = int(callback.data.split("_")[-1])
-    
+
     new_keyboard = get_cases_grid_keyboard(opened_index=case_idx, revealed=True)
-    
+
     caption = (
         "<b>Weekly Case Opened!</b>\n\n"
         "Better luck next time! Spend again during the week to try your luck next Sunday!"
