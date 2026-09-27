@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import logging
 import random
 import dns.resolver
@@ -36,7 +37,7 @@ IMG_THANK_YOU = "https://i.ibb.co/mrSbwWjX/IMG-20260920-132011-139.jpg"
 IMG_SUPPORT_US = "https://i.ibb.co/tpnPCqqS/IMG-20260920-132013-670.jpg"
 IMG_STARS = "https://i.ibb.co/rfN5N5c9/IMG-20260920-132016-808.jpg"
 IMG_CRYPTO = "https://i.ibb.co/Q7szPntS/IMG-20260920-132018-685.jpg"
-IMG_WEEKLY_CASE = "https://i.ibb.co/6JHkSgfj/IMG-20260920-131952-198.jpg"  # Replace with your imgbb link
+IMG_WEEKLY_CASE = "https://i.ibb.co/example/weekly_case_photo.jpg"  # Replace with your imgbb link
 
 # MongoDB Setup
 mongo_client = AsyncIOMotorClient(MONGO_URI)
@@ -66,6 +67,7 @@ async def get_or_create_user(user):
             "first_name": user.first_name or "User",
             "balance": 10.0,
             "total_spends": 0.0,
+            "weekly_spends": 0.0,
         }
         await users_collection.insert_one(user_data)
     else:
@@ -76,6 +78,9 @@ async def get_or_create_user(user):
         if "total_spends" not in user_data:
             user_data["total_spends"] = 0.0
             updates["total_spends"] = 0.0
+        if "weekly_spends" not in user_data:
+            user_data["weekly_spends"] = 0.0
+            updates["weekly_spends"] = 0.0
 
         if updates:
             await users_collection.update_one(
@@ -88,7 +93,7 @@ async def get_or_create_user(user):
 async def update_balance_and_spends(user_id: int, deduct_amount: float):
     await users_collection.update_one(
         {"user_id": user_id},
-        {"$inc": {"balance": -deduct_amount, "total_spends": deduct_amount}},
+        {"$inc": {"balance": -deduct_amount, "total_spends": deduct_amount, "weekly_spends": deduct_amount}},
     )
 
 
@@ -112,44 +117,6 @@ async def create_oxapay_invoice(amount: float, order_id: str, description: str):
     except Exception as e:
         logging.error(f"OxaPay API error: {e}")
     return "https://oxapay.com/pay/example"
-
-
-# --- DYNAMIC REWARD CALCULATION ---
-def calculate_prize(total_spends: float, is_loss_tile: bool) -> str:
-    """
-    Calculates prize based on spending levels:
-    - 8 tiles are guaranteed 'Better Luck Next Time' (is_loss_tile=True).
-    - 1% chance for TG Premium, 1% chance for 500 Stars.
-    - Spending $200-$500 yields higher star ranges (15 to 25 Stars minimum).
-    """
-    if is_loss_tile:
-        return "Better Luck Next Time"
-
-    roll = random.random() * 100  # Roll between 0.0 and 100.0
-
-    # 1% Chance Cap for Top Tier Prizes
-    if roll < 1.0:
-        return "1 Month TG Premium"
-    elif roll < 2.0:
-        return "500 Stars"
-
-    # Tiered Rewards based on spending
-    if 200.0 <= total_spends <= 500.0:
-        if roll < 40.0:
-            return f"{random.randint(15, 25)} Stars"
-        elif roll < 70.0:
-            return f"{random.randint(26, 100)} Stars"
-        elif roll < 85.0:
-            return f"{random.randint(1, 15)} Boosts"
-        else:
-            return "Telegram NFT"
-    else:
-        if roll < 50.0:
-            return f"{random.randint(5, 15)} Stars"
-        elif roll < 80.0:
-            return f"{random.randint(1, 5)} Boosts"
-        else:
-            return "Better Luck Next Time"
 
 
 # --- KEYBOARDS ---
@@ -203,63 +170,59 @@ def get_more_menu_keyboard():
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Weekly Case", callback_data="btn_weekly_cases"
+                    text="🎁 Weekly Cases", callback_data="btn_weekly_cases"
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="Back to Main Menu", callback_data="ui_main_menu"
+                    text="Back to Main menu",
+                    callback_data="ui_main_menu",
+                    style="danger",
                 )
             ],
         ]
     )
 
 
-def get_weekly_case_keyboard():
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Open Gift Box", callback_data="btn_open_gift_box"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="Back to Main Menu", callback_data="ui_main_menu"
-                )
-            ],
-        ]
-    )
-
-
-def get_25_tiles_keyboard():
-    # Pre-select 8 random tiles out of 25 to be 'Better Luck Next Time'
-    loss_tiles = set(random.sample(range(1, 26), 8))
-
-    grid = []
-    tile_counter = 1
-    for _ in range(5):
-        row = []
-        for _ in range(5):
-            is_loss = tile_counter in loss_tiles
-            flag = "loss" if is_loss else "win"
-            row.append(
-                InlineKeyboardButton(
-                    text=f"🎁 Box {tile_counter}",
-                    callback_data=f"tile_{tile_counter}_{flag}",
-                )
+def get_cases_grid_keyboard(opened_index=None, revealed=False):
+    rewards = ["6 Stars", "15 Stars", "25 Stars", "1 Month TG Premium", "Better Luck Next Time"]
+    
+    keyboard = []
+    row = []
+    
+    for i in range(1, 7):
+        if not revealed:
+            btn_text = "🎁"
+            style = "success"
+        else:
+            if i == opened_index:
+                btn_text = "Better Luck Next Time"
+            else:
+                btn_text = random.choice(["6 Stars", "15 Stars", "25 Stars", "1 Month TG Premium"])
+            style = "danger"
+            
+        row.append(
+            InlineKeyboardButton(
+                text=btn_text,
+                callback_data=f"open_case_{i}" if not revealed else "case_opened_already",
+                style=style
             )
-            tile_counter += 1
-        grid.append(row)
-
-    grid.append(
+        )
+        
+        if len(row) == 3:
+            keyboard.append(row)
+            row = []
+            
+    keyboard.append(
         [
             InlineKeyboardButton(
-                text="Back to Main Menu", callback_data="ui_main_menu"
+                text="Back to Main menu",
+                callback_data="ui_main_menu",
+                style="danger",
             )
         ]
     )
-    return InlineKeyboardMarkup(inline_keyboard=grid)
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
 def get_premium_keyboard():
@@ -406,7 +369,6 @@ def get_support_us_keyboard():
 
 # --- HANDLERS ---
 
-
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
     user_data = await get_or_create_user(message.from_user)
@@ -422,6 +384,78 @@ async def cmd_start(message: Message):
         parse_mode="HTML",
         reply_markup=get_main_menu_keyboard(),
     )
+
+
+@dp.callback_query(F.data == "btn_more")
+async def show_more_menu(callback: CallbackQuery):
+    caption = "<b>More Options</b>\n\nSelect an option below:"
+    await callback.message.edit_media(
+        media=InputMediaPhoto(
+            media=IMG_MAIN, caption=caption, parse_mode="HTML"
+        ),
+        reply_markup=get_more_menu_keyboard(),
+    )
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "btn_weekly_cases")
+async def show_weekly_cases(callback: CallbackQuery):
+    user_data = await get_or_create_user(callback.from_user)
+    
+    today = datetime.datetime.now().weekday()  # Sunday is 6
+    is_sunday = (today == 6)
+    weekly_spends = user_data.get("weekly_spends", 0.0)
+
+    caption = (
+        "<b>Weekly Cases for our bot users</b>\n\n"
+        "We’re adding a small way to return some to the users who make purchases in @FedarateBot,\n\n"
+        "Each week, customers who purchased Telegram Premium, Stars, Boosts, or Hosted a Pre-paid giveaways through @FedarateBot "
+        "will be able to open 1 case every Sunday, The cases will contain gifts such as telegram premium, Stars - 25 to 5k, "
+        "Boosts - 1 to 15, Telegram nfts and nothing (Better luck next time) Every purchase made during the week counts as an entry.\n\n"
+        "Winner will be picked every Sunday\n\n"
+        "We’re grateful for everyone who continues to use and trust our service, this is just a small way of giving back."
+    )
+
+    if not is_sunday:
+        await callback.answer("Please wait for Sunday to open cases!", show_alert=True)
+        return
+
+    if weekly_spends <= 0.0:
+        await callback.answer("You haven't spent anything this week! Purchase services during the week to unlock Sunday cases.", show_alert=True)
+        return
+
+    await callback.message.edit_media(
+        media=InputMediaPhoto(
+            media=IMG_WEEKLY_CASE, caption=caption, parse_mode="HTML"
+        ),
+        reply_markup=get_cases_grid_keyboard(),
+    )
+    await callback.answer()
+
+
+@dp.callback_query(F.data.startswith("open_case_"))
+async def open_case(callback: CallbackQuery):
+    case_idx = int(callback.data.split("_")[-1])
+    
+    new_keyboard = get_cases_grid_keyboard(opened_index=case_idx, revealed=True)
+    
+    caption = (
+        "<b>Weekly Case Opened!</b>\n\n"
+        "Better luck next time! Spend again during the week to try your luck next Sunday!"
+    )
+
+    await callback.message.edit_media(
+        media=InputMediaPhoto(
+            media=IMG_WEEKLY_CASE, caption=caption, parse_mode="HTML"
+        ),
+        reply_markup=new_keyboard,
+    )
+    await callback.answer("Revealed! Better luck next time!", show_alert=True)
+
+
+@dp.callback_query(F.data == "case_opened_already")
+async def case_opened_already(callback: CallbackQuery):
+    await callback.answer("You have already opened your case for this week!", show_alert=True)
 
 
 @dp.callback_query(F.data == "ui_main_menu")
@@ -441,87 +475,6 @@ async def show_main_menu(callback: CallbackQuery, state: FSMContext):
         reply_markup=get_main_menu_keyboard(),
     )
     await callback.answer()
-
-
-@dp.callback_query(F.data == "btn_more")
-async def show_more_menu(callback: CallbackQuery):
-    caption = "<b>More Options</b>\n\nSelect an option from below:"
-    await callback.message.edit_media(
-        media=InputMediaPhoto(
-            media=IMG_MAIN, caption=caption, parse_mode="HTML"
-        ),
-        reply_markup=get_more_menu_keyboard(),
-    )
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "btn_weekly_cases")
-async def show_weekly_cases(callback: CallbackQuery):
-    caption = (
-        "<b>Weekly Cases for our bot users</b>\n\n"
-        "We’re adding a small way to return some to the users who make purchases in @FedarateBot,\n\n"
-        "Each week, customers who purchased Telegram Premium, Stars, Boosts, or Hosted a Pre-paid giveaways "
-        "through @FedarateBot will be able to open 1 case every Sunday, The cases will contain gifts such as "
-        "telegram premium, Stars - 25 to 5k, Boosts - 1 to 15, Telegram nfts and nothing (Better luck next time) "
-        "Every purchase made during the week counts as an entry.\n\n"
-        "Winner will be picked every Sunday\n\n"
-        "We’re grateful for everyone who continues to use and trust our service, this is just a small way of giving back."
-    )
-    await callback.message.edit_media(
-        media=InputMediaPhoto(
-            media=IMG_WEEKLY_CASE, caption=caption, parse_mode="HTML"
-        ),
-        reply_markup=get_weekly_case_keyboard(),
-    )
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "btn_open_gift_box")
-async def open_gift_box(callback: CallbackQuery):
-    caption = "<b>🎁 Select a tile below to reveal your weekly gift!</b>"
-    await callback.message.edit_media(
-        media=InputMediaPhoto(
-            media=IMG_WEEKLY_CASE, caption=caption, parse_mode="HTML"
-        ),
-        reply_markup=get_25_tiles_keyboard(),
-    )
-    await callback.answer()
-
-
-@dp.callback_query(F.data.startswith("tile_"))
-async def handle_tile_click(callback: CallbackQuery):
-    parts = callback.data.split("_")
-    tile_id = parts[1]
-    is_loss = parts[2] == "loss"
-
-    user_data = await get_or_create_user(callback.from_user)
-    total_spends = user_data.get("total_spends", 0.0)
-
-    prize = calculate_prize(total_spends, is_loss_tile=is_loss)
-
-    current_markup = callback.message.reply_markup
-    new_keyboard = []
-
-    if current_markup and current_markup.inline_keyboard:
-        for row in current_markup.inline_keyboard:
-            new_row = []
-            for btn in row:
-                if btn.callback_data == callback.data:
-                    btn_text = "❌ Better Luck Next Time" if prize == "Better Luck Next Time" else f"🎉 {prize}"
-                    new_row.append(
-                        InlineKeyboardButton(
-                            text=btn_text,
-                            callback_data=f"revealed_{tile_id}",
-                        )
-                    )
-                else:
-                    new_row.append(btn)
-            new_keyboard.append(new_row)
-
-    await callback.message.edit_reply_markup(
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=new_keyboard)
-    )
-    await callback.answer(f"Result: {prize}", show_alert=True)
 
 
 @dp.callback_query(F.data == "ui_buy_premium")
@@ -641,7 +594,8 @@ async def show_profile_stats(callback: CallbackQuery):
         f"<b>User ID:</b> <code>{user_data.get('user_id')}</code>\n"
         f"<b>Username:</b> @{user_data.get('username', 'N/A')}\n"
         f"<b>Current Balance:</b> ${user_data.get('balance', 0.0):.2f}\n"
-        f"<b>Total Spending:</b> ${user_data.get('total_spends', 0.0):.2f}"
+        f"<b>Total Spending:</b> ${user_data.get('total_spends', 0.0):.2f}\n"
+        f"<b>Weekly Spending:</b> ${user_data.get('weekly_spends', 0.0):.2f}"
     )
     await callback.answer(profile_text, show_alert=True)
 
@@ -677,7 +631,7 @@ async def ask_stars_amount(callback: CallbackQuery, state: FSMContext):
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="Back to Main menu", callback_data="ui_main_menu"
+                        text="Back to Main menu", callback_data="ui_main_menu", style="danger"
                     )
                 ]
             ]
@@ -751,7 +705,7 @@ async def ask_crypto_dollars(callback: CallbackQuery, state: FSMContext):
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="Return to Main Menu", callback_data="ui_main_menu"
+                        text="Return to Main Menu", callback_data="ui_main_menu", style="danger"
                     )
                 ]
             ]
